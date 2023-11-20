@@ -11,6 +11,10 @@
 // Created:   2012-11-03
 // Copyright: Matt Brown ()
 
+#ifdef _DEBUG
+//#define SIMULATE_UPGRADE
+#endif
+
 #include <wx/artprov.h>
 #include <wx/clipbrd.h>
 #include <wx/debugrpt.h>
@@ -119,6 +123,8 @@
 #include "../include/control-play-blue-icon.xpm"
 
 #include <xlsxwriter.h>
+
+#include "wxWEBPHandler/wx/imagwebp.h"
 
 //(*InternalHeaders(xLightsFrame)
 #include <wx/bitmap.h>
@@ -449,18 +455,18 @@ EVT_COMMAND(wxID_ANY, EVT_PROMOTE_EFFECTS, xLightsFrame::PromoteEffects)
 EVT_COMMAND(wxID_ANY, EVT_APPLYLAST, xLightsFrame::ApplyLast)
 EVT_COMMAND(wxID_ANY, EVT_RGBEFFECTS_CHANGED, xLightsFrame::PerspectivesChanged)
 wx__DECLARE_EVT1(EVT_RENDER_RANGE, wxID_ANY, &xLightsFrame::RenderRange)
-    wx__DECLARE_EVT1(EVT_SELECTED_EFFECT_CHANGED, wxID_ANY, &xLightsFrame::SelectedEffectChanged)
-        EVT_COMMAND(29898, EVT_TURNONOUTPUTTOLIGHTS, xLightsFrame::TurnOnOutputToLights)
-            EVT_COMMAND(29899, EVT_PLAYJUKEBOXITEM, xLightsFrame::PlayJukeboxItem)
-                EVT_COMMAND(wxID_ANY, EVT_VC_CHANGED, xLightsFrame::VCChanged)
-                    EVT_COMMAND(wxID_ANY, EVT_COLOUR_CHANGED, xLightsFrame::ColourChanged)
-                        EVT_COMMAND(wxID_ANY, EVT_SETEFFECTCHOICE, xLightsFrame::SetEffectChoice)
-                            EVT_COMMAND(wxID_ANY, EVT_TIPOFDAY_READY, xLightsFrame::TipOfDayReady)
-                                EVT_COMMAND(wxID_ANY, EVT_SET_EFFECT_DURATION, xLightsFrame::SetEffectDuration)
-                                    EVT_SYS_COLOUR_CHANGED(xLightsFrame::OnSysColourChanged)
-                                        END_EVENT_TABLE()
+wx__DECLARE_EVT1(EVT_SELECTED_EFFECT_CHANGED, wxID_ANY, &xLightsFrame::SelectedEffectChanged)
+EVT_COMMAND(29898, EVT_TURNONOUTPUTTOLIGHTS, xLightsFrame::TurnOnOutputToLights)
+EVT_COMMAND(29899, EVT_PLAYJUKEBOXITEM, xLightsFrame::PlayJukeboxItem)
+EVT_COMMAND(wxID_ANY, EVT_VC_CHANGED, xLightsFrame::VCChanged)
+EVT_COMMAND(wxID_ANY, EVT_COLOUR_CHANGED, xLightsFrame::ColourChanged)
+EVT_COMMAND(wxID_ANY, EVT_SETEFFECTCHOICE, xLightsFrame::SetEffectChoice)
+EVT_COMMAND(wxID_ANY, EVT_TIPOFDAY_READY, xLightsFrame::TipOfDayReady)
+EVT_COMMAND(wxID_ANY, EVT_SET_EFFECT_DURATION, xLightsFrame::SetEffectDuration)
+EVT_SYS_COLOUR_CHANGED(xLightsFrame::OnSysColourChanged)
+END_EVENT_TABLE()
 
-                                            void AddEffectToolbarButtons(EffectManager& manager, xlAuiToolBar* EffectsToolBar)
+void AddEffectToolbarButtons(EffectManager& manager, xlAuiToolBar* EffectsToolBar)
 {
     int size = EffectsToolBar->FromDIP(16);
     for (size_t x = 0; x < manager.size(); ++x) {
@@ -1869,6 +1875,7 @@ xLightsFrame::xLightsFrame(wxWindow* parent, int ab, wxWindowID id, bool renderO
     EnableNetworkChanges();
 
     wxImage::AddHandler(new wxGIFHandler);
+    wxImage::AddHandler(new wxWEBPHandler);
 
     config->Read("xLightse131Sync", &me131Sync, false);
     _outputManager.SetSyncEnabled(me131Sync);
@@ -2174,7 +2181,7 @@ void xLightsFrame::DoPostStartupCommands()
     // dont check for updates if batch rendering
     if (!_renderMode && !_checkSequenceMode) {
 // Don't bother checking for updates when debugging.
-#ifndef _DEBUG
+#if !defined(_DEBUG) || defined(SIMULATE_UPGRADE)
         if (!IsFromAppStore()) {
             CheckForUpdate(1, true, false);
         }
@@ -5018,7 +5025,7 @@ std::string xLightsFrame::CheckSequence(bool displayInEditor, bool writeToFile)
             for (const auto& itc : _outputManager.GetControllers()) {
                 auto eth = dynamic_cast<ControllerEthernet*>(itc);
                 if (eth != nullptr) {
-                    if (eth != it && it->GetIP() != "MULTICAST" && (it->GetIP() == eth->GetIP() || it->GetIP() == eth->GetResolvedIP())) {
+                    if (eth != it && it->GetIP() != "MULTICAST" && (it->GetIP() == eth->GetIP() || it->GetIP() == eth->GetResolvedIP(false))) {
                         wxString msg = wxString::Format("    ERR: %s IP Address '%s' for controller '%s' used on another controller '%s'. This is not allowed.",
                                                         (const char*)it->GetProtocol().c_str(),
                                                         (const char*)it->GetIP().c_str(),
@@ -8669,7 +8676,10 @@ bool xLightsFrame::CheckForUpdate(int maxRetries, bool canSkipUpdates, bool show
                           (const char*)urlVersion.c_str(),
                           (const char*)configver.c_str());
 
-        if ((!urlVersion.Matches(configver)) && (!urlVersion.Matches(xlights_version_string)) && IsVersionOlder(urlVersion, xlights_version_string)) {
+#ifndef SIMULATE_UPGRADE
+        if ((!urlVersion.Matches(configver)) && (!urlVersion.Matches(xlights_version_string)) && IsVersionOlder(urlVersion, xlights_version_string)) 
+#endif
+        {
             found_update = true;
             UpdaterDialog* dialog = new UpdaterDialog(this);
 

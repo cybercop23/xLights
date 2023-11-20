@@ -477,8 +477,8 @@ bool xLightsFrame::PromptForShowDirectory(bool permanent) {
 }
 #pragma endregion
 
-void xLightsFrame::GetControllerDetailsForChannel(int32_t channel, std::string& controllername, std::string& type, std::string& protocol, std::string& description, int32_t& channeloffset, std::string &ip, std::string& u, std::string& inactive, std::string& baud, int& start_universe, int& start_universe_channel) {
-
+void xLightsFrame::GetControllerDetailsForChannel(int32_t channel, std::string& controllername, std::string& type, std::string& protocol, std::string& description, int32_t& channeloffset, std::string& ip, std::string& u, std::string& inactive, std::string& baud, int& start_universe, int& start_universe_channel)
+{
     int32_t sc = 0;
     int32_t csc = 0;
     Controller* c = _outputManager.GetController(channel, csc);
@@ -506,7 +506,8 @@ void xLightsFrame::GetControllerDetailsForChannel(int32_t channel, std::string& 
         auto eth = dynamic_cast<ControllerEthernet*>(c);
         if (eth != nullptr) {
             ip = eth->GetIP();
-            u = o->GetUniverseString();
+            if (o != nullptr)
+                u = o->GetUniverseString();
         }
 
         auto ser = dynamic_cast<ControllerSerial*>(c);
@@ -1515,7 +1516,7 @@ void xLightsFrame::InitialiseControllersTab(bool rebuildPropGrid) {
         if (it->IsFromBase())
         {
             if (it->IsActive()) {
-                List_Controllers->SetItemTextColour(row, *wxBLUE);
+                List_Controllers->SetItemTextColour(row, CyanOrBlue());
             } else {
                 List_Controllers->SetItemTextColour(row, wxColor(0x80, 0x80, 0xFF));
             }
@@ -2136,17 +2137,26 @@ void xLightsFrame::OnListControllersItemRClick(wxListEvent& event) {
         ethernet += "xxx";
     }
 
-    auto name = Controllers_PropertyEditor->GetProperty("ControllerName")->GetValue().GetString();
-    auto controller = _outputManager.GetController(name);
+    std::vector<Controller*> selectedControllers;
+    for (const auto& controllerName : GetSelectedControllerNames()) {
+        Controller* controller = _outputManager.GetController(controllerName);
+        if (controller)
+            selectedControllers.push_back(controller);
+    }
+
+    bool anySelectedControllersFromBase = std::any_of(selectedControllers.begin(), selectedControllers.end(), [](const Controller* controller) { return controller->IsFromBase(); });
+    bool allSelectedControllersFromBase = std::all_of(selectedControllers.begin(), selectedControllers.end(), [](const Controller* controller) { return controller->IsFromBase(); });
+    bool enableActivateMenuItems = selectedControllers.size() > 0 && !anySelectedControllersFromBase;
+    bool enableUnlinkFromBaseMenuItem = selectedControllers.size() > 0 && allSelectedControllersFromBase;
 
     mnu.Append(ID_NETWORK_ADDETHERNET, ethernet)->Enable(ButtonAddControllerSerial->IsEnabled());
     mnu.Append(ID_NETWORK_ADDNULL, "Insert NULL")->Enable(ButtonAddControllerSerial->IsEnabled());
     mnu.Append(ID_NETWORK_ADDSERIAL, "Insert DMX/LOR/DLight/Renard")->Enable(ButtonAddControllerSerial->IsEnabled());
-    mnu.Append(ID_NETWORK_ACTIVE, "Activate")->Enable(ButtonAddControllerSerial->IsEnabled() && controller != nullptr && !controller->IsFromBase());
-    mnu.Append(ID_NETWORK_ACTIVEXLIGHTS, "Activate in xLights Only")->Enable(ButtonAddControllerSerial->IsEnabled() && controller != nullptr && !controller->IsFromBase());
-    mnu.Append(ID_NETWORK_INACTIVE, "Inactivate")->Enable(ButtonAddControllerSerial->IsEnabled() && controller != nullptr && !controller->IsFromBase());
+    mnu.Append(ID_NETWORK_ACTIVE, "Activate")->Enable(ButtonAddControllerSerial->IsEnabled() && enableActivateMenuItems);
+    mnu.Append(ID_NETWORK_ACTIVEXLIGHTS, "Activate in xLights Only")->Enable(ButtonAddControllerSerial->IsEnabled() && enableActivateMenuItems);
+    mnu.Append(ID_NETWORK_INACTIVE, "Inactivate")->Enable(ButtonAddControllerSerial->IsEnabled() && enableActivateMenuItems);
     mnu.Append(ID_NETWORK_DELETE, "Delete")->Enable(ButtonAddControllerSerial->IsEnabled());
-    mnu.Append(ID_NETWORK_UNLINKFROMBASE, "Unlink from Base Show Folder")->Enable(ButtonAddControllerSerial->IsEnabled() && controller != nullptr && controller->IsFromBase());
+    mnu.Append(ID_NETWORK_UNLINKFROMBASE, "Unlink from Base Show Folder")->Enable(ButtonAddControllerSerial->IsEnabled() && enableUnlinkFromBaseMenuItem);
 
     mnu.Connect(wxEVT_MENU, (wxObjectEventFunction)&xLightsFrame::OnListControllerPopup, nullptr, this);
     PopupMenu(&mnu);
@@ -2357,7 +2367,7 @@ bool xLightsFrame::UploadInputToController(Controller* controller, wxString &mes
         if (caps->SupportsInputOnlyUpload()) {
             auto vendor = controller->GetVendor();
             auto model = controller->GetModel();
-            auto ip = controller->GetResolvedIP();
+            auto ip = controller->GetResolvedIP(true);
             if (ip == "MULTICAST" || ip == "") {
                 wxTextEntryDialog dlg(this, "Controller IP Address", "IP Address", ip);
                 if (dlg.ShowModal() != wxID_OK) {
@@ -2422,7 +2432,7 @@ bool xLightsFrame::UploadOutputToController(Controller* controller, wxString& me
         if (caps->SupportsUpload()) {
             auto vendor = controller->GetVendor();
             auto model = controller->GetModel();
-            auto ip = controller->GetResolvedIP();
+            auto ip = controller->GetResolvedIP(true);
             if (ip == "MULTICAST") {
                 wxTextEntryDialog dlg(this, "Controller IP Address", "IP Address", ip);
                 if (dlg.ShowModal() != wxID_OK) {

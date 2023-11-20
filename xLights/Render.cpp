@@ -563,15 +563,19 @@ public:
             //must lock the layer so the Effect* stays valid
             std::unique_lock<std::recursive_mutex> elayerLock(elayer->GetLock());
             Effect* ef = findEffectForFrame(elayer, frame, info.currentEffectIdxs[layer]);
+            Effect* copy = nullptr;
 
-            if (ef != nullptr && ef->GetEffectName() == "Duplicate") {
+            if (ef != nullptr && ef->GetEffectIndex() == EffectManager::eff_DUPLICATE) {
                 // we are mirroring another model ... so find the right effect on that model/layer
                 Effect* orig = ef;
-                ef = findEffectForFrame(orig->GetSetting("E_CHOICE_Duplicate_Model"), wxAtoi(orig->GetSetting("E_SPINCTRL_Duplicate_Layer")), frame);
+                
+                ef = findEffectForFrame(orig->GetSetting("E_CHOICE_Duplicate_Model"), orig->GetSettings().GetInt("E_SPINCTRL_Duplicate_Layer"), frame);
 
                 if (ef != nullptr) {
 
-                    if (ef->GetEffectName() == "Duplicate") {
+                    copy = ef;
+
+                    if (ef->GetEffectIndex() == EffectManager::eff_DUPLICATE) {
                         // we cant duplicate a duplicate
                         ef = nullptr;
                     } else {
@@ -611,8 +615,14 @@ public:
                 }
             } 
 
-            if (ef != info.currentEffects[layer]) {
-                info.currentEffects[layer] = ef;
+            Effect* compare = copy != nullptr ? copy : ef;
+
+            if (compare != info.currentEffects[layer]) {
+                if (copy != nullptr) {
+                    info.currentEffects[layer] = copy;
+                } else {
+                    info.currentEffects[layer] = ef;
+                }
                 SetInializingStatus(frame, layer, info.submodel, strand, -1);
                 initialize(layer, frame, ef, info.settingsMaps[layer], buffer);
                 info.effectStates[layer] = true;
