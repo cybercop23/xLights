@@ -2383,7 +2383,7 @@ bool xLightsFrame::UploadInputToController(Controller* controller, wxString &mes
                 if (bc->IsConnected()) {
                     if (bc->SetInputUniverses(controller, this)) {
                         logger_base.debug("Attempt to upload controller inputs successful on controller %s:%s:%s", (const char*)controller->GetVendor().c_str(), (const char*)controller->GetModel().c_str(), (const char*)controller->GetVariant().c_str());
-                        message = vendor + " Input Upload complete.";
+                        message = vendor + " Input Upload Completed.";
                         res = true;
                     }
                     else {
@@ -2392,7 +2392,7 @@ bool xLightsFrame::UploadInputToController(Controller* controller, wxString &mes
                     }
                 }
                 else {
-                    message = vendor + " Input Upload Failed. Unable to connect";
+                    message = vendor + " Input Upload Failed. Unable to connect.";
                 }
                 delete bc;
             }
@@ -2448,13 +2448,13 @@ bool xLightsFrame::UploadOutputToController(Controller* controller, wxString& me
             if (bc != nullptr) {
                 if (bc->IsConnected()) {
                     if (bc->SetOutputs(&AllModels, &_outputManager, controller, this)) {
-                        message = vendor + " Output Upload Complete.";
+                        message = vendor + " Output Upload Completed.";
                         res = true;
                     } else {
                         message = vendor + " Output Upload Failed.";
                     }
                 } else {
-                    message = vendor + " Output Upload Failed. Unable to connect";
+                    message = vendor + " Output Upload Failed. Unable to connect.";
                 }
                 delete bc;
             } else {
