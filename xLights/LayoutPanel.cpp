@@ -2118,7 +2118,7 @@ void LayoutPanel::BulkEditGroupControllerPreview() {
 
     wxArrayString choices = Model::GetLayoutGroups(xlights->AllModels);
     int sel = 0;
-    wxSingleChoiceDialog dlg(this, "Preview", "Preview", choices);
+    wxSingleChoiceDialog dlg(this, "Previews", "Previews", choices);
     dlg.SetSelection(sel);
     OptimiseDialogPosition(&dlg);
     if (dlg.ShowModal() == wxID_OK) {
